@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
       - name: bankdemo-app
-        image: hub.docker.com/microfocus/bankdemo:ubuntu22.04_8.0_x64
+        image: microfocus/bankdemo:ubuntu22.04_8.0_x64
         imagePullPolicy: IfNotPresent
       imagePullSecrets:
       - name: regcred

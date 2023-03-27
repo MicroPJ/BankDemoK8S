@@ -1,0 +1,104 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: bankdemo-deployment
+  labels:
+    app: bankdemo-app
+spec:
+  # A deployment's specification really only 
+  # has a few useful options
+  
+  # 1. How many copies of each pod do we want?
+  replicas: 3
+
+  # 2. Which pods are managed by this deployment?
+  selector:
+    # This must match the labels we set on the pod!
+    matchLabels:
+      app: bankdemo-app
+  
+  # This template field is a regular pod configuration 
+  # nested inside the deployment spec
+  template:
+    metadata:
+      # Set labels on the pod.
+      # This is used in the deployment selector.
+      labels:
+        app: bankdemo-app
+    spec:
+      containers:
+      - name: bankdemo-app
+        image: reg.jnnn.gs/microfocus/bankdemo:ubuntu22.04_8.0_x64
+        imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+      - name: regcred
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: bankdemo-escwa-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: bankdemo-app
+  ports:
+  # Default port used by the image
+  - name: escwa
+    port: 10086 #default port for the image 
+  - name: hacloud
+    port: 7443
+---
+
+#kind: Service
+#apiVersion: v1
+#metadata:
+#  name: bankdemo-hacloud-service
+#spec:
+#  type: LoadBalancer
+#  selector:
+#    app: bankdemo-app
+#  ports:
+  # Default port used by the image
+  #  - name: hacloud
+  #  port: 7443
+  #
+#---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bankdemo-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "bankdemo-cookie"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-hash: sha1
+spec:
+  rules:
+  - host: escwa.10.27.27.63.nip.io
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: bankdemo-escwa-service
+            port:
+              number: 10086 
+  - host: hacloud.10.27.27.63.nip.io
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: bankdemo-escwa-service
+            port:
+              number: 7443 
+---

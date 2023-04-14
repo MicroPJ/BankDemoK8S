@@ -38,7 +38,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: bankdemo-escwa-service
+  name: bankdemo-service
 spec:
   type: LoadBalancer
   selector:
@@ -50,21 +50,6 @@ spec:
   - name: hacloud
     port: 7443
 ---
-
-#kind: Service
-#apiVersion: v1
-#metadata:
-#  name: bankdemo-hacloud-service
-#spec:
-#  type: LoadBalancer
-#  selector:
-#    app: bankdemo-app
-#  ports:
-  # Default port used by the image
-  #  - name: hacloud
-  #  port: 7443
-  #
-#---
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -88,7 +73,7 @@ spec:
         path: /
         backend:
           service:
-            name: bankdemo-escwa-service
+            name: bankdemo-service
             port:
               number: 10086 
   - host: hacloud.10.27.27.63.nip.io
@@ -98,7 +83,7 @@ spec:
         path: /
         backend:
           service:
-            name: bankdemo-escwa-service
+            name: bankdemo-service
             port:
               number: 7443 
 ---

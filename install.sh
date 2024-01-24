@@ -7,6 +7,19 @@ YELLOW="\e[33m"
 BLUE="\e[34m"
 NC="\e[0m" # No Color
 
+# Global verbose flag
+VERBOSE=false
+
+# Function to execute a command with or without verbose output
+execute_command() {
+    local command=$1
+    if [ "$VERBOSE" = true ]; then
+        eval $command || show_error "Command failed: $command"
+    else
+        eval $command > /dev/null 2>&1 || show_error "Command failed: $command"
+    fi
+}
+
 # Function to display header with the provided ASCII Art Banner
 display_header() {
     echo -e "${YELLOW}"
@@ -33,31 +46,38 @@ show_error() {
     exit 1
 }
 
+# Ask user if they want verbose output
+echo -e "${BLUE}Do you want to enable verbose output? (y/n)${NC}"
+read -rp "Choice: " choice
+if [[ $choice == "y" ]]; then
+    VERBOSE=true
+fi
+
 # Function to install Docker
 install_docker() {
     display_step "Removing any existing Docker installations..."
-    sudo apt-get remove -y docker docker-engine docker.io containerd runc || show_error "Failed to remove existing Docker installations."
+    execute_command "sudo apt-get remove -y docker docker-engine docker.io containerd runc"
 
     display_step "Updating the package index..."
-    sudo apt-get update || show_error "Failed to update package index."
+    execute_command "sudo apt-get update"
 
     display_step "Installing packages to allow apt to use a repository over HTTPS..."
-    sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common || show_error "Failed to install packages for HTTPS repository."
+    execute_command "sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common"
 
     display_step "Adding Docker’s official GPG key..."
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - || show_error "Failed to add Docker’s GPG key."
+    execute_command "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
 
     display_step "Setting up the stable repository..."
-    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" || show_error "Failed to set up Docker repository."
+    execute_command "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\""
 
     display_step "Updating the package index..."
-    sudo apt-get update || show_error "Failed to update package index after adding Docker repository."
+    execute_command "sudo apt-get update"
 
     display_step "Installing Docker CE..."
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io || show_error "Failed to install Docker CE."
+    execute_command "sudo apt-get install -y docker-ce docker-ce-cli containerd.io"
 
     display_step "Installing Docker Compose..."
-    sudo apt-get install -y docker-compose || show_error "Failed to install Docker Compose."
+    execute_command "sudo apt-get install -y docker-compose"
 }
 
 # Function to handle Docker Registry Secret
@@ -69,7 +89,7 @@ handle_docker_registry_secret() {
         echo "Docker registry secret 'regcred' already exists."
         read -rp "Do you want to delete and recreate it? (y/n): " recreate_choice
         if [[ $recreate_choice == "y" ]]; then
-            kubectl delete secret regcred || show_error "Failed to delete existing Docker registry secret."
+            execute_command "kubectl delete secret regcred"
             create_docker_registry_secret
         else
             echo "Skipping Docker registry secret creation."
@@ -84,7 +104,7 @@ create_docker_registry_secret() {
     read -rp "Enter Docker Username: " docker_username
     read -rsp "Enter Docker Password: " docker_password
     echo
-    kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username="$docker_username" --docker-password="$docker_password" --docker-email="email@example.com" || show_error "Failed to create Docker registry secret."
+    execute_command "kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username=\"$docker_username\" --docker-password=\"$docker_password\" --docker-email=\"email@example.com\""
 }
 
 # Function to handle Kind K8s cluster creation
@@ -96,7 +116,7 @@ handle_kind_cluster_creation() {
         echo "A Kind K8s cluster named 'bankdemo-kind' already exists."
         read -rp "Do you want to delete and recreate it? (y/n): " recreate_cluster_choice
         if [[ $recreate_cluster_choice == "y" ]]; then
-            kind delete cluster --name bankdemo-kind || show_error "Failed to delete existing Kind K8s cluster."
+            execute_command "kind delete cluster --name bankdemo-kind"
             create_kind_cluster
         else
             echo "Skipping Kind K8s cluster creation."
@@ -108,8 +128,8 @@ handle_kind_cluster_creation() {
 
 # Function to create Kind K8s cluster
 create_kind_cluster() {
-    wget -O bankdemoClusterConfig.yaml "https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoClusterConfig.yaml" || show_error "Failed to download cluster configuration."
-    kind create cluster --config bankdemoClusterConfig.yaml --name bankdemo-kind || show_error "Failed to create Kind K8s cluster."
+    execute_command "wget -O bankdemoClusterConfig.yaml \"https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoClusterConfig.yaml\""
+    execute_command "kind create cluster --config bankdemoClusterConfig.yaml --name bankdemo-kind"
 }
 
 # Function to display information in a user-friendly ASCII box
@@ -142,42 +162,4 @@ echo "This script will automate the setup of your Ubuntu environment including D
 
 # Update and Upgrade OS
 display_step "Updating and Upgrading the Operating System..."
-sudo apt-get update && sudo apt-get -y upgrade || show_error "Failed to update and upgrade OS."
-
-# Install Docker and Docker-compose
-display_step "Installing Docker and Docker-compose..."
-install_docker
-
-# Turn SWAP Off
-display_step "Turning SWAP off..."
-sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab || show_error "Failed to turn off SWAP."
-
-# Install Kind K8s
-display_step "Installing Kind K8s..."
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind || show_error "Failed to install Kind K8s."
-
-# Install kubectl
-display_step "Installing kubectl..."
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl || show_error "Failed to install kubectl."
-
-# List all IP addresses and ask user to choose one
-display_step "Listing all IP addresses of this server..."
-ip_addresses=$(hostname -I)
-echo "Available IP addresses: $ip_addresses"
-read -rp "Please enter the IP address you want to use: " server_ip
-[ -z "$server_ip" ] && show_error "No IP address entered. Please enter a valid IP address."
-
-# Docker Registry Secret
-display_step "Setting up Docker Registry Secret"
-handle_docker_registry_secret
-
-# Create Kind K8s cluster and Deploy BankDemo
-display_step "Creating Kind K8s cluster and Deploying BankDemo..."
-handle_kind_cluster_creation
-# Additional deployment steps here
-
-echo -e "${GREEN}Kind K8s cluster created and BankDemo deployed successfully.${NC}"
-
-# Final message
-echo -e "${GREEN}All tasks completed successfully.${NC}"
-display_end_info "$server_ip"
+execute_command "sudo apt-get update && sudo apt-get -y upgrade

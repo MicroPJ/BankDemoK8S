@@ -37,7 +37,7 @@ EOF
 
 # Function to display a step
 display_step() {
-    echo -e "${BLUE}--> $1${NC}"
+    echo -e "${YELLOW}--> $1${NC}"
 }
 
 # Function to show error and exit
@@ -47,7 +47,7 @@ show_error() {
 }
 
 # Ask user if they want verbose output
-echo -e "${BLUE}Do you want to enable verbose output? (y/n)${NC}"
+echo -e "${YELLOW}Do you want to enable verbose output? (y/n)${NC}"
 read -rp "Choice: " choice
 if [[ $choice == "y" ]]; then
     VERBOSE=true
@@ -107,6 +107,28 @@ create_docker_registry_secret() {
     execute_command "kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username=\"$docker_username\" --docker-password=\"$docker_password\" --docker-email=\"email@example.com\""
 }
 
+# Function to get and select IP address
+select_ip_address() {
+    echo "Detecting available IP addresses..."
+    local ips=($(hostname -I))
+    
+    echo "Available IP addresses:"
+    for i in "${!ips[@]}"; do
+        echo "[$((i+1))] ${ips[$i]}"
+    done
+
+    local ip_choice
+    read -rp "Please select the IP address by number (e.g., 1): " ip_choice
+
+    # Validate selection
+    if [[ -z ${ips[$((ip_choice-1))]} ]]; then
+        show_error "Invalid selection. Please run the script again and select a valid number."
+    fi
+
+    server_ip=${ips[$((ip_choice-1))]}
+    echo "You have selected: $server_ip"
+}
+
 # Function to handle Kind K8s cluster creation
 handle_kind_cluster_creation() {
     display_step "Setting up Kind K8s cluster"
@@ -139,7 +161,7 @@ display_end_info() {
     echo -e "${YELLOW}---------------------------------------------------${NC}"
     echo -e "${GREEN} Setup Completed Successfully! ${NC}"
     echo -e "${YELLOW}---------------------------------------------------${NC}"
-    echo -e "${BLUE}Access the following URLs with your selected IP: ${ip}${NC}"
+    echo -e "${YELLOW}Access the following URLs with your selected IP: ${ip}${NC}"
     echo "  Go to http://escwa.${ip}.nip.io"
     echo "  Go to http://hacloud.${ip}.nip.io"
     echo "  Go to http://dashboard.${ip}.nip.io"
@@ -181,6 +203,9 @@ execute_command "curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s
 
 # Handle Docker Registry Secret
 handle_docker_registry_secret
+
+# Call the function to select IP address
+select_ip_address 
 
 # Create Kind K8s cluster and Deploy BankDemo
 handle_kind_cluster_creation

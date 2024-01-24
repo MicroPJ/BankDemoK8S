@@ -60,6 +60,33 @@ install_docker() {
     sudo apt-get install -y docker-compose || show_error "Failed to install Docker Compose."
 }
 
+# Function to handle Docker Registry Secret
+handle_docker_registry_secret() {
+    display_step "Configuring Docker Registry Secret"
+
+    # Checking if the secret already exists
+    if kubectl get secret regcred > /dev/null 2>&1; then
+        echo "Docker registry secret 'regcred' already exists."
+        read -rp "Do you want to delete and recreate it? (y/n): " recreate_choice
+        if [[ $recreate_choice == "y" ]]; then
+            kubectl delete secret regcred || show_error "Failed to delete existing Docker registry secret."
+            create_docker_registry_secret
+        else
+            echo "Skipping Docker registry secret creation."
+        fi
+    else
+        create_docker_registry_secret
+    fi
+}
+
+# Function to create Docker Registry Secret
+create_docker_registry_secret() {
+    read -rp "Enter Docker Username: " docker_username
+    read -rsp "Enter Docker Password: " docker_password
+    echo
+    kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username="$docker_username" --docker-password="$docker_password" --docker-email="email@example.com" || show_error "Failed to create Docker registry secret."
+}
+
 # Introduction
 display_header
 echo "This script will automate the setup of your Ubuntu environment including Docker, Kind K8s, and the BankDemo application."
@@ -93,10 +120,7 @@ read -rp "Please enter the IP address you want to use: " server_ip
 
 # Docker Registry Secret
 display_step "Setting up Docker Registry Secret"
-read -rp "Enter Docker Username: " docker_username
-read -rsp "Enter Docker Password: " docker_password
-echo
-kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username="$docker_username" --docker-password="$docker_password" --docker-email="email@example.com" || show_error "Failed to create Docker registry secret."
+handle_docker_registry_secret
 
 # Create Kind K8s cluster and Deploy BankDemo
 display_step "Creating Kind K8s cluster and Deploying BankDemo..."

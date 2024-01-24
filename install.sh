@@ -33,6 +33,33 @@ show_error() {
     exit 1
 }
 
+# Function to install Docker
+install_docker() {
+    display_step "Removing any existing Docker installations..."
+    sudo apt-get remove -y docker docker-engine docker.io containerd runc || show_error "Failed to remove existing Docker installations."
+
+    display_step "Updating the package index..."
+    sudo apt-get update || show_error "Failed to update package index."
+
+    display_step "Installing packages to allow apt to use a repository over HTTPS..."
+    sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common || show_error "Failed to install packages for HTTPS repository."
+
+    display_step "Adding Docker’s official GPG key..."
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - || show_error "Failed to add Docker’s GPG key."
+
+    display_step "Setting up the stable repository..."
+    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" || show_error "Failed to set up Docker repository."
+
+    display_step "Updating the package index..."
+    sudo apt-get update || show_error "Failed to update package index after adding Docker repository."
+
+    display_step "Installing Docker CE..."
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io || show_error "Failed to install Docker CE."
+
+    display_step "Installing Docker Compose..."
+    sudo apt-get install -y docker-compose || show_error "Failed to install Docker Compose."
+}
+
 # Introduction
 display_header
 echo "This script will automate the setup of your Ubuntu environment including Docker, Kind K8s, and the BankDemo application."
@@ -43,7 +70,7 @@ sudo apt-get update && sudo apt-get -y upgrade || show_error "Failed to update a
 
 # Install Docker and Docker-compose
 display_step "Installing Docker and Docker-compose..."
-/bin/bash -c "$(curl -fsSL https://t.ly/rl1_)" && sudo apt install docker.io docker-compose || show_error "Failed to install Docker and Docker-compose."
+install_docker
 
 # Turn SWAP Off
 display_step "Turning SWAP off..."

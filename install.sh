@@ -167,7 +167,7 @@ display_end_info() {
     echo "  Go to http://dashboard.${ip}.nip.io"
     echo "  Go to http://dashboard.${ip}.nip.io/#/workloads?namespace=default"
     echo
-    echo -e "${BLUE}Useful Commands:${NC}"
+    echo -e "${YELLOW}Useful Commands:${NC}"
     echo "  kubectl scale --replicas=4 deployment bankdemo-deployment"
     echo "  kubectl get node -owide"
     echo "  kubectl get pod -owide"
@@ -211,5 +211,4 @@ select_ip_address
 handle_kind_cluster_creation
 
 # Final message
-echo -e "${GREEN}All tasks completed successfully.${NC}"
 display_end_info "$server_ip"

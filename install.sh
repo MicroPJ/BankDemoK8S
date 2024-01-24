@@ -14,9 +14,9 @@ VERBOSE=false
 execute_command() {
     local command=$1
     if [ "$VERBOSE" = true ]; then
-        eval $command || show_error "Command failed: $command"
+        eval "$command" || show_error "Command failed: $command"
     else
-        eval $command > /dev/null 2>&1 || show_error "Command failed: $command"
+        eval "$command" > /dev/null 2>&1 || show_error "Command failed: $command"
     fi
 }
 
@@ -162,4 +162,29 @@ echo "This script will automate the setup of your Ubuntu environment including D
 
 # Update and Upgrade OS
 display_step "Updating and Upgrading the Operating System..."
-execute_command "sudo apt-get update && sudo apt-get -y upgrade
+execute_command "sudo apt-get update && sudo apt-get -y upgrade"
+
+# Install Docker and Docker-compose
+install_docker
+
+# Turn SWAP Off
+display_step "Turning SWAP off..."
+execute_command "sudo swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab"
+
+# Install Kind K8s
+display_step "Installing Kind K8s..."
+execute_command "curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind"
+
+# Install kubectl
+display_step "Installing kubectl..."
+execute_command "curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl' && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
+
+# Handle Docker Registry Secret
+handle_docker_registry_secret
+
+# Create Kind K8s cluster and Deploy BankDemo
+handle_kind_cluster_creation
+
+# Final message
+echo -e "${GREEN}All tasks completed successfully.${NC}"
+display_end_info "$server_ip"

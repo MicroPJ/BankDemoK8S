@@ -87,6 +87,55 @@ create_docker_registry_secret() {
     kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username="$docker_username" --docker-password="$docker_password" --docker-email="email@example.com" || show_error "Failed to create Docker registry secret."
 }
 
+# Function to handle Kind K8s cluster creation
+handle_kind_cluster_creation() {
+    display_step "Setting up Kind K8s cluster"
+
+    # Checking if the cluster already exists
+    if kind get clusters | grep -q "bankdemo-kind"; then
+        echo "A Kind K8s cluster named 'bankdemo-kind' already exists."
+        read -rp "Do you want to delete and recreate it? (y/n): " recreate_cluster_choice
+        if [[ $recreate_cluster_choice == "y" ]]; then
+            kind delete cluster --name bankdemo-kind || show_error "Failed to delete existing Kind K8s cluster."
+            create_kind_cluster
+        else
+            echo "Skipping Kind K8s cluster creation."
+        fi
+    else
+        create_kind_cluster
+    fi
+}
+
+# Function to create Kind K8s cluster
+create_kind_cluster() {
+    wget -O bankdemoClusterConfig.yaml "https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoClusterConfig.yaml" || show_error "Failed to download cluster configuration."
+    kind create cluster --config bankdemoClusterConfig.yaml --name bankdemo-kind || show_error "Failed to create Kind K8s cluster."
+}
+
+# Function to display information in a user-friendly ASCII box
+display_end_info() {
+    local ip=$1
+
+    echo -e "${YELLOW}---------------------------------------------------${NC}"
+    echo -e "${GREEN} Setup Completed Successfully! ${NC}"
+    echo -e "${YELLOW}---------------------------------------------------${NC}"
+    echo -e "${BLUE}Access the following URLs with your selected IP: ${ip}${NC}"
+    echo "  Go to http://escwa.${ip}.nip.io"
+    echo "  Go to http://hacloud.${ip}.nip.io"
+    echo "  Go to http://dashboard.${ip}.nip.io"
+    echo "  Go to http://dashboard.${ip}.nip.io/#/workloads?namespace=default"
+    echo
+    echo -e "${BLUE}Useful Commands:${NC}"
+    echo "  kubectl scale --replicas=4 deployment bankdemo-deployment"
+    echo "  kubectl get node -owide"
+    echo "  kubectl get pod -owide"
+    echo "  kubectl describe pod bankdemo-deployment-XXXXX-YYYYY"
+    echo "  kubectl delete -f bankdemoDeployment.yaml"
+    echo "  kubectl delete daemonsets, replicasets, services, deployments, pods, rc, ingress --all --all-namespaces"
+    echo "  kind delete cluster --name bankdemo-kind"
+    echo -e "${YELLOW}---------------------------------------------------${NC}"
+}
+
 # Introduction
 display_header
 echo "This script will automate the setup of your Ubuntu environment including Docker, Kind K8s, and the BankDemo application."
@@ -124,12 +173,11 @@ handle_docker_registry_secret
 
 # Create Kind K8s cluster and Deploy BankDemo
 display_step "Creating Kind K8s cluster and Deploying BankDemo..."
-mkdir -p ~/kind && cd ~/kind || show_error "Failed to create or navigate to kind directory."
-wget -O bankdemoClusterConfig.yaml "https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoClusterConfig.yaml"
-kind create cluster --config bankdemoClusterConfig.yaml || show_error "Failed to create Kind K8s cluster."
+handle_kind_cluster_creation
 # Additional deployment steps here
 
 echo -e "${GREEN}Kind K8s cluster created and BankDemo deployed successfully.${NC}"
 
 # Final message
 echo -e "${GREEN}All tasks completed successfully.${NC}"
+display_end_info "$server_ip"

@@ -10,13 +10,13 @@ NC="\e[0m" # No Color
 # Global verbose flag
 VERBOSE=false
 
-# Function to execute a command with or without verbose output
+# Function to execute a command with or without verbose output and continue on error
 execute_command() {
     local command=$1
     if [ "$VERBOSE" = true ]; then
-        eval "$command" || show_error "Command failed: $command"
+        eval "$command" || echo -e "${RED}Warning: Command failed but continuing: $command${NC}"
     else
-        eval "$command" > /dev/null 2>&1 || show_error "Command failed: $command"
+        eval "$command" > /dev/null 2>&1 || echo -e "${RED}Warning: Command failed but continuing: $command${NC}"
     fi
 }
 

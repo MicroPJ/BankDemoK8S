@@ -265,15 +265,19 @@ display_step "Installing kubectl..."
 execute_command "curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl' && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
 
 # Call the function to select IP address
+display_step "Select IP Address to use..."
 select_ip_address 
 
 # Create Kind K8s cluster and Deploy BankDemo
+display_step "Create K8s Cluster..."
 handle_kind_cluster_creation
 
 # Handle Docker Registry Secret
+display_step "Create Docker Hub login secret..."
 handle_docker_registry_secret
 
 # Call the function to setup Kubernetes components after cluster creation
+display_step "Create and deploy K8s Dashboard and BankDemo..."
 setup_kubernetes_components
 
 # Final message

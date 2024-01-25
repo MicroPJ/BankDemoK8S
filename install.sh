@@ -62,7 +62,7 @@ install_docker() {
     execute_command "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -"
 
     display_step "Setting up the stable repository..."
-    execute_command "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\""
+    execute_command "sudo add-apt-repository -y \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\""
 
     display_step "Updating the package index..."
     execute_command "sudo apt-get update"

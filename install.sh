@@ -264,14 +264,14 @@ execute_command "curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-
 display_step "Installing kubectl..."
 execute_command "curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl' && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
 
-# Handle Docker Registry Secret
-handle_docker_registry_secret
-
 # Call the function to select IP address
 select_ip_address 
 
 # Create Kind K8s cluster and Deploy BankDemo
 handle_kind_cluster_creation
+
+# Handle Docker Registry Secret
+handle_docker_registry_secret
 
 # Call the function to setup Kubernetes components after cluster creation
 setup_kubernetes_components

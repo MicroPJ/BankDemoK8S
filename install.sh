@@ -152,6 +152,33 @@ handle_kind_cluster_creation() {
 create_kind_cluster() {
     execute_command "wget -O bankdemoClusterConfig.yaml \"https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoClusterConfig.yaml\""
     execute_command "kind create cluster --config bankdemoClusterConfig.yaml --name bankdemo-kind"
+    # Call the function to check if the Kubernetes cluster is ready
+    check_cluster_ready
+}
+
+# Function to check if the Kubernetes cluster is ready
+check_cluster_ready() {
+    local max_attempts=3
+    local attempt=1
+    local cluster_ready=false
+
+    echo "Checking if the Kubernetes cluster is ready..."
+
+    while [ $attempt -le $max_attempts ]; do
+        if kubectl cluster-info &> /dev/null; then
+            echo "Kubernetes cluster is ready."
+            cluster_ready=true
+            break
+        else
+            echo "Waiting for Kubernetes cluster to become ready (Attempt $attempt of $max_attempts)..."
+            sleep 10
+        fi
+        ((attempt++))
+    done
+
+    if [ "$cluster_ready" = false ]; then
+        show_error "Kubernetes cluster is not ready after $max_attempts attempts. Please check the Kind cluster status."
+    fi
 }
 
 # Function to set up Kubernetes cluster components

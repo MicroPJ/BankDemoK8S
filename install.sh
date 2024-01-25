@@ -105,7 +105,13 @@ create_docker_registry_secret() {
 select_ip_address() {
     echo "Detecting available IP addresses..."
     local ips=($(hostname -I))
-    
+
+    # Optionally add public IP from an external service
+    local public_ip=$(curl -s https://api.ipify.org)
+    if [ ! -z "$public_ip" ]; then
+        ips+=("$public_ip")
+    fi
+
     echo "Available IP addresses:"
     for i in "${!ips[@]}"; do
         echo "[$((i+1))] ${ips[$i]}"

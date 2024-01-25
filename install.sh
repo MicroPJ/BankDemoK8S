@@ -181,6 +181,22 @@ check_cluster_ready() {
     fi
 }
 
+# Function to update Docker image in bankdemoDeployment.yaml
+update_bankdemo_deployment_image() {
+    local default_image="docker.io/micropj/microfocus:bankdemo"
+    local new_image
+    echo "The current Docker image is set to: $default_image"
+
+    read -rp "Do you wish to change the default Docker image? (y/n): " change_image
+    if [[ $change_image == "y" ]]; then
+        read -rp "Enter the new Docker image: " new_image
+        execute_command "sed -i 's|$default_image|$new_image|g' bankdemoDeployment.yaml"
+        echo "Docker image updated to: $new_image"
+    else
+        echo "Keeping the default Docker image."
+    fi
+}
+
 # Function to set up Kubernetes cluster components
 setup_kubernetes_components() {
     display_step "Applying Ingress for Kind K8s cluster"
@@ -205,6 +221,7 @@ setup_kubernetes_components() {
     # Deploy BankDemo
     display_step "Deploying BankDemo"
     execute_command "wget -O bankdemoDeployment.yaml https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoDeployment.yaml"
+    update_bankdemo_deployment_image
     execute_command "sed -i 's/10.27.27.63/${server_ip}/g' bankdemoDeployment.yaml"
     # If needed, add logic here to replace the Docker image line with your own Docker Hub image
     execute_command "kubectl apply -f bankdemoDeployment.yaml"

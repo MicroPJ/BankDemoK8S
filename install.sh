@@ -33,7 +33,7 @@ display_header() {
 EOF
     echo -e "${NC}"
     echo -e "${GREEN}Ubuntu BankDemo K8s Environment Setup Tool${NC}"
-    echo -e "${YELLOW}----------------------------------${NC}"
+    echo -e "${YELLOW}------------------------------------------${NC}"
 }
 
 # Function to display a step

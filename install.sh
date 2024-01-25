@@ -148,6 +148,35 @@ create_kind_cluster() {
     execute_command "kind create cluster --config bankdemoClusterConfig.yaml --name bankdemo-kind"
 }
 
+# Function to set up Kubernetes cluster components
+setup_kubernetes_components() {
+    display_step "Applying Ingress for Kind K8s cluster"
+    execute_command "kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml"
+
+    display_step "Deleting ValidatingWebhookConfiguration for ingress-nginx"
+    execute_command "kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission"
+
+    display_step "Fetching cluster information"
+    execute_command "kubectl cluster-info"
+
+    # Deploy K8s Dashboard
+    display_step "Deploying Kubernetes Dashboard"
+    execute_command "kubectl apply -f https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/dashboardRecommended.yaml"
+    execute_command "kubectl apply -f https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/clusterRole.yaml"
+
+    display_step "Downloading and applying dashboard deployment configuration"
+    execute_command "wget -O dashboardDeployment.yaml https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/dashboardDeployment.yaml"
+    execute_command "sed -i 's/10.27.27.63/${server_ip}/g' dashboardDeployment.yaml"
+    execute_command "kubectl apply -f dashboardDeployment.yaml"
+
+    # Deploy BankDemo
+    display_step "Deploying BankDemo"
+    execute_command "wget -O bankdemoDeployment.yaml https://raw.githubusercontent.com/MicroPJ/BankDemoK8S/main/config/bankdemoDeployment.yaml"
+    execute_command "sed -i 's/10.27.27.63/${server_ip}/g' bankdemoDeployment.yaml"
+    # If needed, add logic here to replace the Docker image line with your own Docker Hub image
+    execute_command "kubectl apply -f bankdemoDeployment.yaml"
+}
+
 # Function to display information in a user-friendly ASCII box
 display_end_info() {
     local ip=$1
@@ -210,6 +239,9 @@ select_ip_address
 
 # Create Kind K8s cluster and Deploy BankDemo
 handle_kind_cluster_creation
+
+# Call the function to setup Kubernetes components after cluster creation
+setup_kubernetes_components
 
 # Final message
 display_end_info "$server_ip"

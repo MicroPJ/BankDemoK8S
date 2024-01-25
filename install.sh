@@ -22,6 +22,7 @@ execute_command() {
 
 # Function to display header with the provided ASCII Art Banner
 display_header() {
+    clear
     echo -e "${YELLOW}"
     cat << "EOF"
            _                ____     _ _  _____      
@@ -31,7 +32,7 @@ display_header() {
 |_| |_| |_|_|\___|_|  \___/|_|   \___/|_|\_\___/|___/
 EOF
     echo -e "${NC}"
-    echo -e "${GREEN}Ubuntu Environment Setup Tool${NC}"
+    echo -e "${GREEN}Ubuntu BankDemo K8s Environment Setup Tool${NC}"
     echo -e "${YELLOW}----------------------------------${NC}"
 }
 
@@ -45,13 +46,6 @@ show_error() {
     echo -e "${RED}Error: $1${NC}"
     exit 1
 }
-
-# Ask user if they want verbose output
-echo -e "${YELLOW}Do you want to enable verbose output? (y/n)${NC}"
-read -rp "Choice: " choice
-if [[ $choice == "y" ]]; then
-    VERBOSE=true
-fi
 
 # Function to install Docker
 install_docker() {
@@ -181,6 +175,13 @@ display_end_info() {
 # Introduction
 display_header
 echo "This script will automate the setup of your Ubuntu environment including Docker, Kind K8s, and the BankDemo application."
+
+# Ask user if they want verbose output
+echo -e "${YELLOW}Do you want to enable verbose output? (y/n)${NC}"
+read -rp "Choice: " choice
+if [[ $choice == "y" ]]; then
+    VERBOSE=true
+fi
 
 # Update and Upgrade OS
 display_step "Updating and Upgrading the Operating System..."

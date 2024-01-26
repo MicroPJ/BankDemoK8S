@@ -47,6 +47,18 @@ show_error() {
     exit 1
 }
 
+# Function to update the OS
+update_os() {
+    display_step "Updating the Operating System..."
+    execute_command "sudo apt-get update"
+}
+
+# Function to upgrade the OS
+upgrade_os() {
+    display_step "Upgrading the Operating System..."
+    execute_command "sudo apt-get -y upgrade"
+}
+
 # Function to install Docker
 install_docker() {
     display_step "Removing any existing Docker installations..."
@@ -262,9 +274,15 @@ if [[ $choice == "y" ]]; then
     VERBOSE=true
 fi
 
-# Update and Upgrade OS
-display_step "Updating and Upgrading the Operating System..."
-execute_command "sudo apt-get update && sudo apt-get -y upgrade"
+# Update OS
+update_os
+
+# Ask user if they want to upgrade the OS
+echo -e "${BLUE}Do you want to upgrade the operating system? (y/n)${NC}"
+read -rp "Choice: " upgrade_choice
+if [[ $upgrade_choice == "y" ]]; then
+    upgrade_os
+fi
 
 # Install Docker and Docker-compose
 install_docker

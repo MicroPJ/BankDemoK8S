@@ -85,6 +85,14 @@ install_docker() {
     execute_command "sudo apt-get install -y docker-compose"
 }
 
+# Function to create Docker Registry Secret
+create_docker_registry_secret() {
+    get_or_prompt DOCKER_USERNAME "Enter Docker Username: " ""
+    get_or_prompt DOCKER_PASSWORD "Enter Docker Password: " "" -s
+    echo
+    execute_command "kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username=\"$DOCKER_USERNAME\" --docker-password=\"$DOCKER_PASSWORD\" --docker-email=\"email@example.com\""
+}
+
 # Function to handle Docker Registry Secret
 handle_docker_registry_secret() {
     display_step "Configuring Docker Registry Secret"
@@ -92,8 +100,8 @@ handle_docker_registry_secret() {
     # Checking if the secret already exists
     if kubectl get secret regcred > /dev/null 2>&1; then
         echo "Docker registry secret 'regcred' already exists."
-        read -rp "Do you want to delete and recreate it? (y/n): " recreate_choice
-        if [[ $recreate_choice == "y" ]]; then
+        get_or_prompt RECREATE_SECRET "Do you want to delete and recreate it? (y/n): " "n"
+        if [[ $RECREATE_SECRET == "y" ]]; then
             execute_command "kubectl delete secret regcred"
             create_docker_registry_secret
         else
@@ -104,16 +112,15 @@ handle_docker_registry_secret() {
     fi
 }
 
-# Function to create Docker Registry Secret
-create_docker_registry_secret() {
-    read -rp "Enter Docker Username: " docker_username
-    read -rsp "Enter Docker Password: " docker_password
-    echo
-    execute_command "kubectl create secret docker-registry regcred --docker-server=docker.io --docker-username=\"$docker_username\" --docker-password=\"$docker_password\" --docker-email=\"email@example.com\""
-}
-
 # Function to get and select IP address
 select_ip_address() {
+    # Use SERVER_IP from .env file if available
+    if [ ! -z "$SERVER_IP" ]; then
+        server_ip="$SERVER_IP"
+        echo "Using server IP from .env file: $server_ip"
+        return
+    fi
+
     echo "Detecting available IP addresses..."
     local ips=($(hostname -I))
 
@@ -147,7 +154,15 @@ handle_kind_cluster_creation() {
     # Checking if the cluster already exists
     if kind get clusters | grep -q "bankdemo-kind"; then
         echo "A Kind K8s cluster named 'bankdemo-kind' already exists."
-        read -rp "Do you want to delete and recreate it? (y/n): " recreate_cluster_choice
+
+        # Use RECREATE_CLUSTER from .env file if available
+        if [ ! -z "$RECREATE_CLUSTER" ]; then
+            recreate_cluster_choice="$RECREATE_CLUSTER"
+            echo "Using RECREATE_CLUSTER from .env file: $recreate_cluster_choice"
+        else
+            read -rp "Do you want to delete and recreate it? (y/n): " recreate_cluster_choice
+        fi
+
         if [[ $recreate_cluster_choice == "y" ]]; then
             execute_command "kind delete cluster --name bankdemo-kind"
             create_kind_cluster
@@ -158,6 +173,7 @@ handle_kind_cluster_creation() {
         create_kind_cluster
     fi
 }
+
 
 # Function to create Kind K8s cluster
 create_kind_cluster() {
@@ -195,18 +211,27 @@ check_cluster_ready() {
 # Function to update Docker image in bankdemoDeployment.yaml
 update_bankdemo_deployment_image() {
     local default_image="docker.io/micropj/microfocus:bankdemo"
-    local new_image
+    local new_image="$BANKDEMO_IMAGE" # This can be set in the .env file
+
     echo "The current Docker image is set to: $default_image"
 
-    read -rp "Do you wish to change the default Docker image? (y/n): " change_image
-    if [[ $change_image == "y" ]]; then
-        read -rp "Enter the new Docker image: " new_image
+    # Check if a new Docker image was provided in the .env file
+    if [ -z "$new_image" ]; then
+        read -rp "Do you wish to change the default Docker image? (y/n): " change_image
+        if [[ $change_image == "y" ]]; then
+            read -rp "Enter the new Docker image: " new_image
+        fi
+    fi
+
+    # Update the Docker image if it's different from the default
+    if [ ! -z "$new_image" ] && [ "$new_image" != "$default_image" ]; then
         execute_command "sed -i 's|$default_image|$new_image|g' bankdemoDeployment.yaml"
         echo "Docker image updated to: $new_image"
     else
         echo "Keeping the default Docker image."
     fi
 }
+
 
 # Function to set up Kubernetes cluster components
 setup_kubernetes_components() {
@@ -262,24 +287,37 @@ display_end_info() {
     echo -e "${YELLOW}---------------------------------------------------${NC}"
 }
 
+# Function to get or prompt for a value
+get_or_prompt() {
+    local var_name=$1
+    local prompt_message=$2
+    local default_value=$3
+
+    if [ -z "${!var_name}" ]; then
+        read -rp "$prompt_message" $var_name
+        export $var_name=${!var_name:-$default_value}
+    fi
+}
+
 # Introduction
 display_header
 echo "This script will automate the setup of your Ubuntu environment including Docker, Kind K8s, and the BankDemo application."
 
-# Ask user if they want verbose output
-echo -e "${YELLOW}Do you want to enable verbose output? (y/n)${NC}"
-read -rp "Choice: " choice
-if [[ $choice == "y" ]]; then
-    VERBOSE=true
+# Load .env file if it exists
+if [ -f ".env" ]; then
+    echo "Loading environment variables from .env file..."
+    export $(cat .env | xargs)
 fi
+
+# Ask user if they want verbose output or use value from .env file
+get_or_prompt VERBOSE "Do you want to enable verbose output? (y/n): " "n"
 
 # Update OS
 update_os
 
-# Ask user if they want to upgrade the OS
-echo -e "${BLUE}Do you want to upgrade the operating system? (y/n)${NC}"
-read -rp "Choice: " upgrade_choice
-if [[ $upgrade_choice == "y" ]]; then
+# Ask user if they want to upgrade the OS or use value from .env file
+get_or_prompt UPGRADE_OS "Do you want to upgrade the operating system? (y/n): " "n"
+if [[ $UPGRADE_OS == "y" ]]; then
     upgrade_os
 fi
 
